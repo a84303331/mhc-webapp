@@ -680,11 +680,18 @@ async def health():
     return {"status": "ok", "service": "mhc-webapp"}
 
 
-# ── 全域 401 handler → 導向登入頁 ──────────
-@app.exception_handler(401)
-async def unauthorized_handler(request: Request, exc: Exception):
-    """未登入時導向登入頁，而非回傳 JSON"""
-    return RedirectResponse(url="/login", status_code=303)
+# ── 全域 401 → 導向登入頁 ─────────────────
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """401 時導向登入頁，其餘維持預設"""
+    if exc.status_code == 401:
+        return RedirectResponse(url="/login", status_code=303)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
 
 
 # ── Main ────────────────────────────────────
