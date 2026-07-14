@@ -492,7 +492,7 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
     <div class="nav">
         <span class="logo">🧠 MHC</span>
         <span class="user-info">
-            {current_user.name} · 今日 {daily_used}/{limit if limit > 0 else '∞'} 次{admin_link} ·
+            {current_user.name} · <span id="usage-display">今日 {daily_used}/{limit if limit > 0 else '∞'} 次</span>{admin_link} ·
             <a href="/logout">登出</a>
         </span>
     </div>
@@ -551,8 +551,15 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
                 document.getElementById('result-area').appendChild(iframe);
                 btn.disabled = false;
                 btn.textContent = '提交分析';
-                // 重新整理以更新每日次數
-                setTimeout(() => location.reload(), 500);
+                // 更新每日次數（不重整頁面）
+                fetch('/api/usage')
+                    .then(r => r.json())
+                    .then(data => {{
+                        if (data.used !== undefined) {{
+                            document.getElementById('usage-display').textContent =
+                                '今日 ' + data.used + '/' + (data.limit > 0 ? data.limit : '∞') + ' 次';
+                        }}
+                    }});
             }})
             .catch(err => {{
                 document.getElementById('result-area').innerHTML =
@@ -646,6 +653,19 @@ async def logout(current_user: User = Depends(get_current_user), db: AsyncSessio
     resp.delete_cookie("access_token")
     resp.delete_cookie("refresh_token")
     return resp
+
+# ── 每日使用量 API ─────────────────────────
+@app.get("/api/usage")
+async def get_usage(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """回傳當前使用者今日用量（給前端 AJAX 更新）"""
+    daily_used = await get_daily_usage(current_user, db)
+    limit = current_user.daily_limit or 999
+    return {
+        "used": daily_used,
+        "limit": limit if limit > 0 else 0,  # 0 = 不限
+        "remaining": max(0, limit - daily_used) if limit > 0 else 999,
+    }
+
 
 # ── 管理後台 ────────────────────────────────
 from admin import router as admin_router
