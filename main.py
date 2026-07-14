@@ -683,6 +683,16 @@ async def startup():
 async def health():
     """Railway 健康檢查端點 — 完全獨立，不做 DB 查詢"""
     return {"status": "ok", "service": "mhc-webapp"}
+
+
+# ── 全域 401 handler → 導向登入頁 ──────────
+@app.exception_handler(401)
+async def unauthorized_handler(request: Request, exc: Exception):
+    """未登入時導向登入頁，而非回傳 JSON"""
+    return RedirectResponse(url="/login", status_code=303)
+
+
+# ── Main ────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
