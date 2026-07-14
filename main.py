@@ -163,7 +163,8 @@ h2 { color:var(--accent); margin-bottom:1rem; }
 a { color:var(--accent); text-decoration:none; }
 a:hover { text-decoration:underline; }
 input, textarea { width:100%; padding:0.75rem; margin:0.5rem 0; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; font-size:16px; }
-textarea { min-height:120px; resize:vertical; }
+textarea { min-height:140px; resize:vertical; font-size:16px; border:2px solid var(--border); transition:border-color 0.2s; }
+textarea:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px var(--accent-glow); }
 button, .btn { display:inline-block; padding:0.75rem 2rem; background:var(--accent); color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; text-align:center; }
 button:hover, .btn:hover { opacity:0.9; text-decoration:none; }
 button:disabled { opacity:0.5; cursor:not-allowed; }
@@ -507,7 +508,8 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
             </div>
 
             <form id="ask-form" method="POST" action="/api/ask">
-                <textarea name="question" id="question-input" placeholder="描述你的困境，至少 15 個字...&#10;&#10;例如：客戶在颱風天要求破例上廣告，我該怎麼回應才能守住原則又不傷關係？" oninput="updateCharCount()"></textarea>
+                <label for="question-input" style="display:block; font-weight:bold; font-size:1.05rem; margin-bottom:0.5rem; color:var(--text);">✍️ 你的問題</label>
+                <textarea name="question" id="question-input" rows="5" placeholder="描述你的困境，至少 15 個字...&#10;&#10;例如：客戶在颱風天要求破例上廣告，我該怎麼回應才能守住原則又不傷關係？" oninput="updateCharCount()"></textarea>
                 <div class="char-count"><span id="char-count">0</span> / 15 字</div>
                 <button type="submit" id="submit-btn" disabled style="width:100%">提交分析</button>
             </form>
