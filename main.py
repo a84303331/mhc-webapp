@@ -515,6 +515,9 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
                 <div class="example-card" onclick="fillExample('我同時想學程式設計和 UX 設計，但每天只有兩小時，該如何分配？')">
                 我同時想學程式設計和 UX 設計，但每天只有兩小時，該如何分配？
                 </div>
+                <div class="example-card" onclick="fillExample('你即將舉辦年度會議，並在過去六年一直使用的飯店舉辦。你已經印好邀請函，並與嘉賓、講者和附近餐廳協調好了。會議前一週，你收到飯店經理的信，通知你他必須收取去年三倍的費用。你考慮了對每個利害關係人堅持在原飯店舉辦會議的成本和效益：對你自己而言，成本是嚴重的——你無法支付開支；效益是你熟悉場地，不必重做所有邀請和安排。對與會者而言，成本是更高的註冊費，效益是安排清晰和熟悉的場地。對飯店經理而言，成本包括失去你這個客戶，效益是增加的收入——僅限於這次即將舉行的會議（你肯定不會在接下來幾年在那裡開會）。將所有這些呈現給飯店經理，結果是一次有用的談判，他只將金額提高了 50%。')">
+                🆕 飯店合約談判——六年合作、三倍漲價，如何與飯店經理協商？
+                </div>
             </div>
         </div>
 
@@ -535,7 +538,7 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
         var btn = document.getElementById('submit-btn');
         if (btn.disabled) return;
         btn.disabled = true;
-        btn.textContent = '分析中...';
+        btn.textContent = '分析中……可能需要花費 1-3 分鐘，請耐心等待，謝謝';
 
         var formData = new FormData(this);
         fetch('/api/ask', {{ method:'POST', body:formData }})
