@@ -546,10 +546,9 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
         fetch('/api/ask', {{ method:'POST', body:formData }})
             .then(r => r.text())
             .then(html => {{
-                var iframe = document.createElement('iframe');
-                iframe.srcdoc = html;
-                document.getElementById('result-area').innerHTML = '';
-                document.getElementById('result-area').appendChild(iframe);
+                var resultDiv = document.getElementById('result-area');
+                resultDiv.innerHTML = html;
+                resultDiv.scrollIntoView({{ behavior: 'smooth' }});
                 btn.disabled = false;
                 btn.textContent = '提交分析';
                 // 更新每日次數（不重整頁面）
