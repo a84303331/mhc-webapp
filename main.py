@@ -509,7 +509,7 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
 
             <form id="ask-form" method="POST" action="/api/ask">
                 <label for="question-input" style="display:block; font-weight:bold; font-size:1.05rem; margin-bottom:0.5rem; color:var(--text);">✍️ 你的問題</label>
-                <textarea name="question" id="question-input" rows="5" placeholder="描述你的困境，至少 15 個字...&#10;&#10;例如：客戶在颱風天要求破例上廣告，我該怎麼回應才能守住原則又不傷關係？" oninput="updateCharCount()"></textarea>
+                <textarea name="question" id="question-input" rows="5" placeholder="請在這裏描述你的困境，至少 15 個字...&#10;&#10;例如：客戶在颱風天要求破例上廣告，我該怎麼回應才能守住原則又不傷關係？" oninput="updateCharCount()"></textarea>
                 <div class="char-count"><span id="char-count">0</span> / 15 字</div>
                 <button type="submit" id="submit-btn" disabled style="width:100%">提交分析</button>
             </form>
