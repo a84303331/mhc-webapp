@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from models import User
+from models import User, generate_token
 
 # ── 設定 ─────────────────────────────────────────
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me-to-random-64-chars")
@@ -124,7 +124,7 @@ async def register_user(
         name=name,
         email=email,
         password_hash=hash_password(password),
-        email_verify_token=User.generate_token(),  # type: ignore
+        email_verify_token=generate_token(),
         email_verify_token_expires=datetime.utcnow() + timedelta(hours=24),
     )
     db.add(user)
