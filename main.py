@@ -28,6 +28,7 @@ from auth import (
 from mhc_client import ask_mhc, MHCOfflineError, MHCBusyError
 from mailer import send_verification_email, send_password_reset_email
 import httpx
+from health_monitor import start_scheduler, get_status
 
 # ── 新增：安全層 imports ────────────────────────
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -719,6 +720,7 @@ app.include_router(admin_router)
 async def startup():
     """不依賴 DB 的啟動"""
     logger.info("mhc_webapp_started")
+    start_scheduler()
 
 
 # ── Health Check (no DB) ──────────────────
@@ -726,6 +728,21 @@ async def startup():
 async def health():
     """Railway 健康檢查端點 — 完全獨立，不做 DB 查詢"""
     return {"status": "ok", "service": "mhc-webapp"}
+
+
+@app.get("/api/health/pc-status")
+async def pc_health_status():
+    """PC Backend 健康狀態（由 health_monitor 定時更新）"""
+    s = get_status()
+    return {
+        "pc_online": s.online,
+        "last_check": s.last_check.isoformat() if s.last_check else None,
+        "last_ok": s.last_ok.isoformat() if s.last_ok else None,
+        "last_error": s.last_error,
+        "pc_uptime_seconds": s.uptime_seconds,
+        "vault_accessible": s.vault_accessible,
+        "consecutive_failures": s.consecutive_failures,
+    }
 
 
 # ── 全域 401 → 導向登入頁 ─────────────────
