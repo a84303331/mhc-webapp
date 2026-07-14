@@ -4,7 +4,7 @@
     "buildCommand": "pip install -r requirements.txt"
   },
   "deploy": {
-    "startCommand": "/opt/venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}",
+    "startCommand": "/opt/venv/bin/python -m uvicorn test_app:app --host 0.0.0.0 --port ${PORT:-8000}",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE"
