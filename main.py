@@ -27,6 +27,7 @@ from auth import (
 )
 from mhc_client import ask_mhc, MHCOfflineError, MHCBusyError
 from mailer import send_verification_email, send_password_reset_email
+import httpx
 
 # ── 新增：安全層 imports ────────────────────────
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -78,6 +79,32 @@ def sanitize_html(html: str) -> str:
         attributes=ALLOWED_ATTRS,
         strip=True,
     )
+
+
+# ── Turnstile 驗證 ──────────────────────────
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+
+async def verify_turnstile(token: str) -> bool:
+    """驗證 Cloudflare Turnstile token，成功回傳 True"""
+    if not token:
+        return False
+    secret = os.getenv("TURNSTILE_SECRET_KEY", "")
+    if not secret:
+        logger.error("turnstile_secret_not_configured")
+        return False
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                TURNSTILE_VERIFY_URL,
+                data={"secret": secret, "response": token},
+                timeout=10.0,
+            )
+            data = resp.json()
+            return data.get("success", False)
+    except Exception as e:
+        logger.error("turnstile_verify_failed", error=str(e))
+        return False
 
 
 # ── CSP Middleware ──────────────────────────
@@ -335,8 +362,15 @@ async def register(
     email: str = Form(...),
     password: str = Form(...),
     confirm_password: str = Form(...),
+    cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     db: AsyncSession = Depends(get_db),
 ):
+    # Turnstile 驗證（必須先過）
+    if not await verify_turnstile(cf_turnstile_response):
+        return HTMLResponse(f"""<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><style>{BASE_CSS}</style></head>
+        <body><div class="container"><div class="card"><h2>註冊失敗</h2>
+        <div class="alert alert-error">安全驗證失敗，請重新整理頁面後再試</div><a href="/register">返回</a></div></div></body></html>""", status_code=400)
+
     if password != confirm_password:
         return HTMLResponse(f"""<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><style>{BASE_CSS}</style></head>
         <body><div class="container"><div class="card"><h2>註冊失敗</h2>
