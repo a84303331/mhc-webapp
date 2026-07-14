@@ -581,7 +581,21 @@ async def ask(
     chat_patterns = ["你好", "嗨", "哈囉", "hello", "hi", "早安", "晚安", "謝謝", "thank"]
     if question.strip().lower() in chat_patterns or len(question.strip()) < 20 and any(cp in question.strip().lower() for cp in chat_patterns):
         return HTMLResponse(f"""<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><style>{BASE_CSS}</style></head>
-        <body><div class="container"><div class="alert alert-info">👋 你好！MHC 是一個思考工具箱，不是聊天機器人。<br>請告訴我你遇到的困境，我會幫你找到對應的思考框架。</div></div></body></html>""")
+        <body><div class="container"><div class="card">
+        <div class="prompt-intro">
+        <p>感謝您的來訊。MHC 是一個專注於思考分析的平台，並非聊天機器人——我不具備閒聊功能，但我非常樂意為您處理需要深度分析的問題。</p>
+        <p>若您在以下領域有具體的策略或方向需要分析，歡迎隨時提出：</p>
+        <ul style="color:var(--text-secondary); margin-left:1.5rem; line-height:1.8;">
+            <li>職場決策與談判困境</li>
+            <li>學習瓶頸與自學路徑規劃</li>
+            <li>溝通障礙與人際衝突</li>
+            <li>複雜系統與長期策略思考</li>
+            <li>任何您感覺「卡住了」或「需要另一雙眼睛」的問題</li>
+        </ul>
+        <p style="margin-top:1rem;">期待您提出具體的問題，讓我為您提供真正有價值的思考框架。</p>
+        </div>
+        <p class="text-center mt-2"><a href="/ask">← 返回問答頁</a></p>
+        </div></div></body></html>""")
 
     # 每日限額檢查
     limit = current_user.daily_limit or 999
