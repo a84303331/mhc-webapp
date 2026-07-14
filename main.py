@@ -634,32 +634,18 @@ async def logout(current_user: User = Depends(get_current_user), db: AsyncSessio
 from admin import router as admin_router
 app.include_router(admin_router)
 
-# ── Startup ─────────────────────────────────
+# ── Startup (no DB dependency) ─────────────
 @app.on_event("startup")
 async def startup():
-    try:
-        await init_db()
-        logger.info("mhc_webapp_started", db="connected")
-    except Exception as e:
-        logger.error("mhc_webapp_db_init_failed", error=str(e))
-        logger.info("mhc_webapp_started", db="failed")
+    """不依賴 DB 的啟動"""
+    logger.info("mhc_webapp_started")
 
 
-# ── Health Check ────────────────────────────
+# ── Health Check (no DB) ──────────────────
 @app.get("/health")
-async def health(db: AsyncSession = Depends(get_db)):
-    """Railway 健康檢查端點"""
-    try:
-        from sqlalchemy import text
-        await db.execute(text("SELECT 1"))
-        db_status = "connected"
-    except Exception:
-        db_status = "disconnected"
-    return {
-        "status": "ok",
-        "service": "mhc-webapp",
-        "database": db_status,
-    }
+async def health():
+    """Railway 健康檢查端點 — 完全獨立，不做 DB 查詢"""
+    return {"status": "ok", "service": "mhc-webapp"}
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

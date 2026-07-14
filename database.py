@@ -19,7 +19,14 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://localhost:5432/mh
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-engine = create_async_engine(DATABASE_URL, echo=False, pool_size=10, max_overflow=20, pool_recycle=3600)
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,
+    pool_size=10,
+    max_overflow=20,
+    pool_recycle=3600,
+    connect_args={"timeout": 10, "command_timeout": 10},  # 10s timeout
+)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
