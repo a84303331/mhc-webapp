@@ -1,0 +1,13 @@
+{
+  "schema": "$schema: https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "uv sync"
+  },
+  "deploy": {
+    "startCommand": "uv run uvicorn main:app --host 0.0.0.0 --port $PORT",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
