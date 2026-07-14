@@ -97,13 +97,6 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
-# ── Startup ─────────────────────────────────
-@app.on_event("startup")
-async def startup():
-    await init_db()
-    logger.info("mhc_webapp_started")
-
-
 # ── 全域錯誤捕捉 ────────────────────────────
 @app.exception_handler(500)
 async def internal_error_handler(request: Request, exc: Exception):
