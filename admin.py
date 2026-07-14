@@ -46,16 +46,32 @@ async def admin_page(
     for u in users:
         verified = "✅" if u.email_verified else "❌"
         admin_badge = "👑" if u.is_admin else ""
+        active_badge = "🟢" if u.is_active else "🔴 已停用"
         user_rows += f"""
         <tr>
             <td>{u.id}</td>
             <td>{u.name} {admin_badge}</td>
             <td>{u.email} {verified}</td>
+            <td>{active_badge}</td>
             <td>
                 <form method="POST" action="/admin/update-limit" style="display:inline">
                     <input type="hidden" name="user_id" value="{u.id}">
                     <input type="number" name="daily_limit" value="{u.daily_limit}" min="0" max="999" style="width:60px">
                     <button type="submit">更新</button>
+                </form>
+            </td>
+            <td style="white-space:nowrap">
+                <form method="POST" action="/admin/toggle-admin" style="display:inline">
+                    <input type="hidden" name="user_id" value="{u.id}">
+                    <button type="submit" style="font-size:0.8rem;padding:2px 8px">{'取消管理員' if u.is_admin else '設為管理員'}</button>
+                </form>
+                <form method="POST" action="/admin/toggle-active" style="display:inline" onsubmit="return confirm('{'確定啟用' if not u.is_active else '確定停用'} {u.name}？')">
+                    <input type="hidden" name="user_id" value="{u.id}">
+                    <button type="submit" style="font-size:0.8rem;padding:2px 8px;background:{'var(--success)' if not u.is_active else 'var(--warning)'}">{'啟用' if not u.is_active else '停用'}</button>
+                </form>
+                <form method="POST" action="/admin/delete-user" style="display:inline" onsubmit="return confirm('確定刪除 {u.name}？此操作無法復原！')">
+                    <input type="hidden" name="user_id" value="{u.id}">
+                    <button type="submit" style="font-size:0.8rem;padding:2px 8px;background:var(--danger)">刪除</button>
                 </form>
             </td>
             <td>{u.created_at.strftime('%Y-%m-%d') if u.created_at else '-'}</td>
@@ -95,7 +111,7 @@ async def admin_page(
         <table>
             <thead>
                 <tr>
-                    <th>ID</th><th>姓名</th><th>郵箱</th><th>每日上限</th><th>註冊日期</th>
+                    <th>ID</th><th>姓名</th><th>郵箱</th><th>狀態</th><th>每日上限</th><th>操作</th><th>註冊日期</th>
                 </tr>
             </thead>
             <tbody>
@@ -117,11 +133,70 @@ async def update_limit(
 ):
     """更新使用者每日提問上限"""
     if daily_limit < 0:
-        daily_limit = 0  # 0 = 不限
+        daily_limit = 0
 
     await db.execute(
         update(User).where(User.id == user_id).values(daily_limit=daily_limit)
     )
     await db.commit()
     logger.info(f"Admin {current_user.email} updated user {user_id} daily_limit to {daily_limit}")
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@router.post("/toggle-admin")
+async def toggle_admin(
+    user_id: int = Form(...),
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """切換管理員狀態"""
+    result = await db.execute(select(User).where(User.id == user_id))
+    u = result.scalar_one_or_none()
+    if u:
+        if u.id == current_user.id:
+            # 不允許取消自己的管理員
+            pass
+        else:
+            await db.execute(
+                update(User).where(User.id == user_id).values(is_admin=not u.is_admin)
+            )
+            await db.commit()
+            logger.info(f"Admin {current_user.email} toggled admin for {u.email}: {not u.is_admin}")
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@router.post("/toggle-active")
+async def toggle_active(
+    user_id: int = Form(...),
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """切換帳號啟用/停用"""
+    result = await db.execute(select(User).where(User.id == user_id))
+    u = result.scalar_one_or_none()
+    if u:
+        if u.id == current_user.id:
+            pass  # 不允許停用自己的帳號
+        else:
+            await db.execute(
+                update(User).where(User.id == user_id).values(is_active=not u.is_active)
+            )
+            await db.commit()
+            logger.info(f"Admin {current_user.email} toggled active for {u.email}: {not u.is_active}")
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@router.post("/delete-user")
+async def delete_user(
+    user_id: int = Form(...),
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """刪除使用者"""
+    result = await db.execute(select(User).where(User.id == user_id))
+    u = result.scalar_one_or_none()
+    if u and u.id != current_user.id:
+        await db.delete(u)
+        await db.commit()
+        logger.info(f"Admin {current_user.email} deleted user {u.email}")
     return RedirectResponse(url="/admin", status_code=303)

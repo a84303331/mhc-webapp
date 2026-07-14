@@ -35,6 +35,7 @@ class User(Base):
     refresh_token = Column(String(64), nullable=True)  # JWT refresh token
     daily_limit = Column(Integer, default=3)
     is_admin = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)  # False = 停用
     created_at = Column(DateTime, server_default=func.now())
 
     # 關聯

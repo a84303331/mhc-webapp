@@ -246,6 +246,17 @@ async def login(
         </div></div></body></html>
         """, status_code=401)
 
+    if not user.is_active:
+        return HTMLResponse(f"""
+        <!DOCTYPE html><html lang="zh-TW">
+        <head><meta charset="UTF-8"><style>{BASE_CSS}</style></head>
+        <body><div class="container"><div class="card">
+        <h2>帳號已停用</h2>
+        <div class="alert alert-error">此帳號已被管理員停用，請聯繫 hsiachisheng@gmail.com</div>
+        <a href="/login">返回登入</a>
+        </div></div></body></html>
+        """, status_code=403)
+
     # 產生 token
     access_token = create_access_token(user.id, user.email)
     refresh_token = create_refresh_token()
