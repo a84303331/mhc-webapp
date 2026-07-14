@@ -181,6 +181,9 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
 .pw-requirements { font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem; }
 .pw-requirements .met { color:var(--success); }
 .pw-requirements .unmet { color:var(--danger); }
+.prompt-intro { color:var(--text-secondary); line-height:1.8; margin-bottom:1.5rem; }
+.prompt-intro p { margin-bottom:0.75rem; }
+.chat-warning { color:var(--warning) !important; font-weight:bold; border-left:3px solid var(--warning); padding-left:0.75rem; }
 """
 
 
@@ -495,12 +498,12 @@ async def ask_page(current_user: User = Depends(get_current_user), db: AsyncSess
     </div>
     <div class="container">
         <div class="card">
-            <p style="color:var(--text-secondary);margin-bottom:1rem;line-height:1.6;">
-            Minerva HC Toolbox 是一個 AI 輔助思考工具。<br>
-            將你的困境告訴我——無論是決策、溝通、學習或創造瓶頸——<br>
-            MHC 會匹配最適合的思考框架，提供結構化分析。<br>
-            <strong>這不是聊天機器人</strong>，請以完整情境提問。
-            </p>
+            <div class="prompt-intro">
+            <p>歡迎使用 MHC 思考分析平台。</p>
+            <p>這裡沒有閒聊，只有深度洞察。您的每一個問題，都將同時經過兩大引擎的交叉比對：<strong>密涅瓦大學 80 個思考習慣</strong>，為您匹配最適合的思考框架；<strong>人類 188 種行為偏誤</strong>，為您揪出潛藏的認知盲點。</p>
+            <p>無論是職場決策、人生規劃、溝通困境、學習瓶頸，或是複雜系統的策略難題——只要您帶著具體問題而來，我們就為您提供精闢、多維度、可直接行動的分析回覆。</p>
+            <p class="chat-warning">⚠️ 這不是一個聊天機器人。為了確保每一份回覆的深度與品質，請以需要分析或策略方向的問題為主，謝謝您的理解。</p>
+            </div>
 
             <form id="ask-form" method="POST" action="/api/ask">
                 <textarea name="question" id="question-input" placeholder="描述你的困境，至少 15 個字...&#10;&#10;例如：客戶在颱風天要求破例上廣告，我該怎麼回應才能守住原則又不傷關係？" oninput="updateCharCount()"></textarea>
