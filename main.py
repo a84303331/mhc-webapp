@@ -207,6 +207,16 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
 .prompt-intro { color:var(--text-secondary); line-height:1.8; margin-bottom:1.5rem; }
 .prompt-intro p { margin-bottom:0.75rem; }
 .chat-warning { color:var(--warning) !important; font-weight:bold; border-left:3px solid var(--warning); padding-left:0.75rem; }
+.feedback-section { margin-top:2rem; padding:1.5rem; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; }
+.feedback-section h3 { color:var(--accent); margin-bottom:0.75rem; font-size:1rem; }
+.feedback-row { display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.feedback-row:last-child { border-bottom:none; }
+.feedback-label { color:var(--text-secondary); font-size:0.85rem; min-width:100px; }
+.star-rating { display:inline-flex; gap:4px; }
+.star-rating .star { font-size:1.3rem; cursor:pointer; color:#444; transition:color 0.15s; }
+.star-rating .star.active { color:var(--warning); }
+.feedback-submit { margin-top:1rem; text-align:right; }
+.feedback-thanks { display:none; color:var(--success); text-align:center; padding:0.5rem; }
 """
 
 
@@ -214,6 +224,52 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return RedirectResponse(url="/login")
+
+
+# ── 隱私政策 ────────────────────────────────
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_page():
+    return HTMLResponse(f"""<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>隱私政策 — MHC</title><style>{BASE_CSS}</style></head>
+    <body><div class="container" style="max-width:750px;"><div class="card">
+    <h1>🔒 隱私政策</h1>
+    <p style="color:var(--text-secondary);">最後更新：2026 年 7 月 14 日</p>
+
+    <h2>1. 我們收集的資料</h2>
+    <ul><li><strong>帳號資訊</strong>：姓名、電子郵件地址（註冊時提供）</li>
+    <li><strong>使用記錄</strong>：提問內容、分析結果、每日使用次數</li>
+    <li><strong>反饋資料</strong>：你對分析結果的星級評分</li></ul>
+
+    <h2>2. 資料用途</h2>
+    <ul><li>提供 MHC 思維分析服務</li>
+    <li>改善分析品質與使用者體驗</li>
+    <li>每日使用量統計（僅管理員可見）</li>
+    <li>系統安全與濫用防護</li></ul>
+
+    <h2>3. 資料儲存與保護</h2>
+    <ul><li>所有資料儲存在 Railway（美國東部）的 PostgreSQL 資料庫</li>
+    <li>密碼使用 bcrypt 單向雜湊，無法反向還原</li>
+    <li>傳輸過程使用 HTTPS 加密</li>
+    <li>分析引擎運行於本地 PC，提問內容離開 Railway 後僅在本地處理</li></ul>
+
+    <h2>4. 第三方服務</h2>
+    <p>MHC 使用以下第三方服務：</p>
+    <ul><li><strong>Cloudflare Turnstile</strong>：註冊時的人機驗證</li>
+    <li><strong>DeepSeek API</strong>：AI 分析引擎（提問內容會傳送至 DeepSeek 進行分析）</li>
+    <li><strong>Gmail API</strong>：系統通知郵件（郵箱驗證、密碼重設）</li></ul>
+
+    <h2>5. 你的權利</h2>
+    <ul><li>你可以隨時要求刪除帳號及所有相關資料</li>
+    <li>你可以要求匯出你的個人資料</li>
+    <li>請透過 MHC 網站管理員聯繫我們</li></ul>
+
+    <h2>6. Cookie</h2>
+    <p>MHC 使用必要的 session cookie（access_token / refresh_token）來維持登入狀態。不使用追蹤型或廣告型 cookie。</p>
+
+    <h2>7. 政策更新</h2>
+    <p>本政策可能隨服務更新而調整，重大變更時將透過電子郵件通知。</p>
+
+    <p class="text-center mt-2"><a href="/login">返回登入頁</a></p>
+    </div></div></body></html>""")
 
 
 # ── 登入 ────────────────────────────────────
@@ -246,7 +302,8 @@ async def login_page(request: Request, reset: str = ""):
             </form>
             <p class="text-center mt-2">
                 <a href="/register">註冊新帳號</a> ·
-                <a href="/forgot-password">忘記密碼？</a>
+                <a href="/forgot-password">忘記密碼？</a> ·
+                <a href="/privacy">隱私政策</a>
             </p>
         </div>
     </div>
@@ -660,11 +717,17 @@ async def ask(
 
     # 呼叫 PC MHC Backend
     try:
+        import uuid
+        case_id = f"MHC-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+
         result = await ask_mhc(question, current_user.name)
         html = result.get("html", "")
 
         # XSS 過濾
         html = sanitize_html(html)
+
+        # 附加反饋表單
+        html += _feedback_form_html(case_id)
 
         # 增加每日次數
         await increment_daily_usage(current_user, db)
@@ -711,6 +774,107 @@ async def get_usage(current_user: User = Depends(get_current_user), db: AsyncSes
     }
 
 
+# ── 反饋表單輔助函式 ────────────────────────
+def _feedback_form_html(case_id: str) -> str:
+    """生成反饋表單 HTML + JS（五題 1-5 星評分）"""
+    dimensions = [
+        ("insight", "洞察力"),
+        ("clarity", "清晰度"),
+        ("actionability", "可行度"),
+        ("overall", "整體評分"),
+        ("reuse_intent", "再使用意願"),
+    ]
+    rows = ""
+    for key, label in dimensions:
+        stars = "".join(
+            f'<span class="star" data-value="{i}" onclick="setRating(this, \'{key}\', {i})">★</span>'
+            for i in range(1, 6)
+        )
+        rows += f"""
+        <div class="feedback-row">
+            <span class="feedback-label">{label}</span>
+            <div class="star-rating" id="stars-{key}">{stars}</div>
+        </div>"""
+
+    return f"""
+<div class="feedback-section" id="feedback-section">
+    <h3>📊 這份分析對你有幫助嗎？</h3>
+    {rows}
+    <div class="feedback-thanks" id="feedback-thanks">感謝你的回饋！🙏</div>
+    <div class="feedback-submit">
+        <button class="btn btn-primary" onclick="submitFeedback('{case_id}')" id="feedback-btn">提交評分</button>
+    </div>
+</div>
+<script>
+const ratings = {{insight:0, clarity:0, actionability:0, overall:0, reuse_intent:0}};
+function setRating(el, key, val) {{
+    ratings[key] = val;
+    const parent = document.getElementById('stars-' + key);
+    parent.querySelectorAll('.star').forEach(s => {{
+        s.classList.toggle('active', parseInt(s.dataset.value) <= val);
+    }});
+}}
+async function submitFeedback(caseId) {{
+    if (Object.values(ratings).some(v => v === 0)) {{
+        alert('請對所有項目評分');
+        return;
+    }}
+    const btn = document.getElementById('feedback-btn');
+    btn.disabled = true;
+    btn.textContent = '提交中...';
+    try {{
+        const resp = await fetch('/api/feedback', {{
+            method: 'POST',
+            headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+            body: new URLSearchParams({{case_id: caseId, ...ratings}})
+        }});
+        if (resp.ok) {{
+            document.getElementById('feedback-section').innerHTML = '<div class="feedback-section"><div class="feedback-thanks" style="display:block;font-size:1.1rem;">感謝你的回饋！🙏</div></div>';
+        }} else {{
+            btn.disabled = false;
+            btn.textContent = '提交評分';
+            alert('提交失敗，請稍後再試');
+        }}
+    }} catch(e) {{
+        btn.disabled = false;
+        btn.textContent = '提交評分';
+    }}
+}}
+</script>"""
+
+
+# ── 反饋提交 API ─────────────────────────────
+@app.post("/api/feedback")
+async def submit_feedback(
+    case_id: str = Form(...),
+    insight: int = Form(...),
+    clarity: int = Form(...),
+    actionability: int = Form(...),
+    overall: int = Form(...),
+    reuse_intent: int = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """儲存使用者反饋"""
+    valid = all(1 <= v <= 5 for v in [insight, clarity, actionability, overall, reuse_intent])
+    if not valid:
+        raise HTTPException(400, "評分必須在 1-5 之間")
+
+    feedback = Feedback(
+        case_id=case_id,
+        user_id=current_user.id,
+        insight=insight,
+        clarity=clarity,
+        actionability=actionability,
+        overall=overall,
+        reuse_intent=reuse_intent,
+    )
+    db.add(feedback)
+    await db.commit()
+    logger.info("feedback_saved", case_id=case_id, user=current_user.email)
+    return {"status": "ok"}
+
+
 # ── 管理後台 ────────────────────────────────
 from admin import router as admin_router
 app.include_router(admin_router)
@@ -720,7 +884,75 @@ app.include_router(admin_router)
 async def startup():
     """不依賴 DB 的啟動"""
     logger.info("mhc_webapp_started")
-    start_scheduler()
+    scheduler = start_scheduler()
+
+    # ── 每日超限報告（17:00）──
+    from database import get_async_session
+
+    async def daily_report():
+        """17:00 查詢所有用戶今日用量並寄送管理員報告"""
+        from models import User as UserModel
+        from datetime import date, datetime as dt
+        from mailer import send_email
+
+        try:
+            async for session in get_async_session():
+                today = date.today()
+                # 查詢所有已驗證用戶
+                result = await session.execute(
+                    select(UserModel).where(UserModel.is_verified == True)
+                )
+                users = result.scalars().all()
+
+                rows = ""
+                total = 0
+                for u in users:
+                    usage_result = await session.execute(
+                        select(DailyQuestionCount).where(
+                            DailyQuestionCount.user_id == u.id,
+                            DailyQuestionCount.date == today,
+                        )
+                    )
+                    usage = usage_result.scalar_one_or_none()
+                    count = usage.count if usage else 0
+                    total += count
+                    limit = u.daily_limit or 999
+                    icon = "⚠️" if (limit > 0 and count >= limit) else "✅"
+                    rows += f"<tr><td>{u.name}</td><td>{u.email}</td><td style='text-align:center'>{count}</td><td style='text-align:center'>{limit if limit > 0 else '∞'}</td><td style='text-align:center'>{icon}</td></tr>"
+
+                admin_email = os.getenv("ADMIN_EMAIL", "hsiachisheng@gmail.com")
+                subject = f"[MHC] 每日用量報告 {today.strftime('%Y-%m-%d')}（總計 {total} 次）"
+                html = f"""
+                <div style="max-width:700px;margin:0 auto;font-family:sans-serif;color:#e0e0e0;background:#1a1a2e;padding:2rem;border-radius:8px;">
+                    <h2 style="color:#7c3aed;">📊 MHC 每日用量報告</h2>
+                    <p style="color:#a0a0b0;">{today.strftime('%Y 年 %m 月 %d 日')} — 總計 {total} 次提問</p>
+                    <table style="width:100%;border-collapse:collapse;margin-top:1rem;">
+                        <thead><tr style="border-bottom:1px solid #333;">
+                            <th style="text-align:left;padding:8px;color:#a0a0b0;">使用者</th>
+                            <th style="text-align:left;padding:8px;color:#a0a0b0;">信箱</th>
+                            <th style="text-align:center;padding:8px;color:#a0a0b0;">今日用量</th>
+                            <th style="text-align:center;padding:8px;color:#a0a0b0;">限額</th>
+                            <th style="text-align:center;padding:8px;color:#a0a0b0;">狀態</th>
+                        </tr></thead>
+                        <tbody>{rows}</tbody>
+                    </table>
+                    <p style="color:#a0a0b0;font-size:12px;margin-top:1.5rem;">由 MHC 系統自動產生</p>
+                </div>
+                """
+                await send_email(admin_email, subject, html)
+                logger.info(f"daily_report_sent users={len(users)} total={total}")
+                break  # get_async_session generator yields once
+        except Exception as e:
+            logger.error(f"daily_report_failed: {e}")
+
+    scheduler.add_job(
+        daily_report,
+        "cron",
+        hour=17,
+        minute=0,
+        id="daily_report",
+        name="每日用量報告",
+    )
 
 
 # ── Health Check (no DB) ──────────────────

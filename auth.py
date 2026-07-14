@@ -122,7 +122,7 @@ async def register_user(
     # 檢查是否已註冊
     existing = await db.execute(select(User).where(User.email == email))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="此信箱已註冊")
+        raise HTTPException(status_code=400, detail="註冊失敗，請確認輸入資料正確或稍後再試")
 
     # 密碼強度
     pw_error = validate_password_strength(password)
