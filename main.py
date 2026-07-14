@@ -343,7 +343,7 @@ async def register(
         await send_verification_email(email, name, user.email_verify_token)
         return HTMLResponse(f"""<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><style>{BASE_CSS}</style></head>
         <body><div class="container"><div class="card"><h2>註冊成功 🎉</h2>
-        <div class="alert alert-success">驗證信已寄至 {email}，請在 24 小時內點擊連結完成驗證</div>
+        <div class="alert alert-success">驗證信已寄至 {email}，請在 24 小時內點擊連結完成驗證（郵件可能會滙入到垃圾桶）</div>
         <p class="text-center mt-2"><a href="/login">前往登入</a></p></div></div></body></html>""")
     except HTTPException as e:
         return HTMLResponse(f"""<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><style>{BASE_CSS}</style></head>
