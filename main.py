@@ -91,7 +91,8 @@ async def add_security_headers(request: Request, call_next):
         "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data:; "
-        "frame-src https://challenges.cloudflare.com;"
+        "frame-src 'self' blob: https://challenges.cloudflare.com; "
+        "frame-ancestors 'self';"
     )
     return response
 
