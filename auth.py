@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import HTTPException, Depends, status
+from fastapi import HTTPException, Depends, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -73,13 +73,23 @@ def decode_access_token(token: str) -> Optional[dict]:
 # ── Auth Dependency ─────────────────────────────
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    request: Request = None,
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """從 Bearer token 獲取當前使用者（FastAPI dependency）"""
-    if not credentials:
+    """從 Bearer token 或 Cookie 獲取當前使用者"""
+    token = None
+
+    # 優先從 Authorization header
+    if credentials:
+        token = credentials.credentials
+    # 備選從 cookie
+    elif request:
+        token = request.cookies.get("access_token")
+
+    if not token:
         raise HTTPException(status_code=401, detail="請先登入")
 
-    payload = decode_access_token(credentials.credentials)
+    payload = decode_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="登入已過期，請重新登入")
 
