@@ -630,20 +630,36 @@ async def logout(current_user: User = Depends(get_current_user), db: AsyncSessio
     resp.delete_cookie("refresh_token")
     return resp
 
-
 # ── 管理後台 ────────────────────────────────
 from admin import router as admin_router
 app.include_router(admin_router)
 
+# ── Startup ─────────────────────────────────
+@app.on_event("startup")
+async def startup():
+    try:
+        await init_db()
+        logger.info("mhc_webapp_started", db="connected")
+    except Exception as e:
+        logger.error("mhc_webapp_db_init_failed", error=str(e))
+        logger.info("mhc_webapp_started", db="failed")
+
 
 # ── Health Check ────────────────────────────
 @app.get("/health")
-async def health():
+async def health(db: AsyncSession = Depends(get_db)):
     """Railway 健康檢查端點"""
-    return {"status": "ok", "service": "mhc-webapp"}
-
-
-# ── Main ────────────────────────────────────
+    try:
+        from sqlalchemy import text
+        await db.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
+    return {
+        "status": "ok",
+        "service": "mhc-webapp",
+        "database": db_status,
+    }
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
