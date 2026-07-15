@@ -727,19 +727,19 @@ async def ask(
         # XSS 過濾
         html = sanitize_html(html)
 
-        # 附加反饋表單
+        # 背景寄送分析結果郵件（不含反饋表單）
+        import asyncio
+        asyncio.create_task(
+            send_analysis_email(current_user.email, current_user.name, case_id, question, html)
+        )
+
+        # 附加反饋表單（僅網頁顯示用）
         html += _feedback_form_html(case_id)
 
         # 增加每日次數
         await increment_daily_usage(current_user, db)
 
         logger.info("question_submitted", user_email=current_user.email, latency_ms=result.get("llm_latency_ms", 0))
-
-        # 背景寄送分析結果郵件
-        import asyncio
-        asyncio.create_task(
-            send_analysis_email(current_user.email, current_user.name, case_id, question, html)
-        )
 
         return HTMLResponse(html)
 
