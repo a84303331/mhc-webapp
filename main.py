@@ -734,8 +734,12 @@ async def ask(
             send_analysis_email(current_user.email, current_user.name, case_id, question, html)
         )
 
-        # 附加反饋表單（僅網頁顯示用）
-        html += _feedback_form_html(case_id)
+        # 將反饋表單插入 </body> 之前（不在 </html> 之後）
+        feedback_html = _feedback_form_html(case_id)
+        if '</body>' in html:
+            html = html.replace('</body>', feedback_html + '</body>')
+        else:
+            html += feedback_html
 
         # 增加每日次數
         await increment_daily_usage(current_user, db)
