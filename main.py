@@ -370,6 +370,7 @@ async def register_page():
     <body>
     <div class="container">
         <h1>🧠 註冊 MHC</h1>
+        <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;margin-bottom:1rem;">如果您担心隱私問題，可以使用匿名以及用一個別人不知是您的郵箱，只要您能收到確認郵件即可。</p>
         <div class="card">
             <form method="POST" action="/api/auth/register" id="register-form">
                 <div class="form-group">
