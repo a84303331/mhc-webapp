@@ -830,13 +830,22 @@ def _feedback_form_html(case_id: str) -> str:
     </div>
 </div>
 <script>
+console.log('=== MHC FEEDBACK FORM LOADED ===');
 (function() {{
     const CASE_ID = '{case_id}';
     const DIMS = ['insight','clarity','actionability','overall','reuse_intent'];
     const ratings = {{}};
     DIMS.forEach(d => ratings[d] = 0);
 
-    // 事件委派：點擊星星
+    const section = document.getElementById('feedback-section');
+    console.log('feedback-section found:', !!section);
+    console.log('star count:', document.querySelectorAll('.star').length);
+    console.log('btn found:', !!document.getElementById('feedback-btn'));
+
+    if (!section) {{
+        console.error('FATAL: #feedback-section not in DOM');
+        return;
+    }}
     document.getElementById('feedback-section').addEventListener('click', function(e) {{
         const star = e.target.closest('.star');
         if (!star) return;
