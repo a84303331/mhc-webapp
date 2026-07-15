@@ -210,7 +210,7 @@ async def feedback_page(
 ):
     """反饋評分查看頁面"""
     result = await db.execute(
-        select(Feedback).order_by(Feedback.created_at.desc()).limit(100)
+        select(Feedback).order_by(Feedback.submitted_at.desc()).limit(100)
     )
     feedbacks = result.scalars().all()
 
@@ -222,7 +222,7 @@ async def feedback_page(
         user_name = user.email if user else f"ID:{f.user_id}"
         rows += f"""
         <tr>
-            <td style="font-size:0.8rem;white-space:nowrap">{f.created_at.strftime('%m/%d %H:%M') if f.created_at else '-'}</td>
+            <td style="font-size:0.8rem;white-space:nowrap">{f.submitted_at.strftime('%m/%d %H:%M') if f.submitted_at else '-'}</td>
             <td style="font-size:0.8rem">{user_name}</td>
             <td style="font-size:0.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.case_id}</td>
             <td style="text-align:center">{'⭐'*f.insight}</td>
