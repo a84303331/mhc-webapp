@@ -788,7 +788,7 @@ def _feedback_form_html(case_id: str) -> str:
     rows = ""
     for key, label in dimensions:
         stars = "".join(
-            f'<span class="star" data-value="{i}" onclick="setRating(this, \'{key}\', {i})">★</span>'
+            f'<span class="star" data-value="{i}" data-dim="{key}" onclick="setRating(this, {i})">★</span>'
             for i in range(1, 6)
         )
         rows += f"""
@@ -808,7 +808,8 @@ def _feedback_form_html(case_id: str) -> str:
 </div>
 <script>
 const ratings = {{insight:0, clarity:0, actionability:0, overall:0, reuse_intent:0}};
-function setRating(el, key, val) {{
+function setRating(el, val) {{
+    const key = el.dataset.dim;
     ratings[key] = val;
     const parent = document.getElementById('stars-' + key);
     parent.querySelectorAll('.star').forEach(s => {{
@@ -830,7 +831,11 @@ async function submitFeedback(caseId) {{
             body: new URLSearchParams({{case_id: caseId, ...ratings}})
         }});
         if (resp.ok) {{
-            document.getElementById('feedback-section').innerHTML = '<div class="feedback-section"><div class="feedback-thanks" style="display:block;font-size:1.1rem;">感謝你的回饋！🙏</div></div>';
+            // 隱藏評分行和按鈕，顯示感謝訊息
+            document.querySelectorAll('.feedback-row, .feedback-submit').forEach(el => el.style.display = 'none');
+            const thanks = document.getElementById('feedback-thanks');
+            thanks.style.display = 'block';
+            thanks.style.fontSize = '1.1rem';
         }} else {{
             btn.disabled = false;
             btn.textContent = '提交評分';
