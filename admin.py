@@ -6,7 +6,7 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -224,12 +224,18 @@ async def feedback_page(
         <tr>
             <td style="font-size:0.8rem;white-space:nowrap">{f.submitted_at.strftime('%m/%d %H:%M') if f.submitted_at else '-'}</td>
             <td style="font-size:0.8rem">{user_name}</td>
-            <td style="font-size:0.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.case_id}</td>
+            <td style="font-size:0.75rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.case_id}</td>
             <td style="text-align:center">{'⭐'*f.insight}</td>
             <td style="text-align:center">{'⭐'*f.clarity}</td>
             <td style="text-align:center">{'⭐'*f.actionability}</td>
             <td style="text-align:center">{'⭐'*f.overall}</td>
             <td style="text-align:center">{'⭐'*f.reuse_intent}</td>
+            <td style="text-align:center">
+                <form method="POST" action="/admin/feedback/delete" style="display:inline" onsubmit="return confirm('確定刪除這筆評分？')">
+                    <input type="hidden" name="feedback_id" value="{f.id}">
+                    <button type="submit" style="font-size:0.7rem;padding:2px 6px;background:#ef4444;color:#fff;border:none;border-radius:3px;cursor:pointer">✕</button>
+                </form>
+            </td>
         </tr>"""
         total["insight"] += f.insight
         total["clarity"] += f.clarity
@@ -273,7 +279,7 @@ async def feedback_page(
         <table>
             <thead><tr>
                 <th>時間</th><th>使用者</th><th>案例 ID</th>
-                <th>洞察力</th><th>清晰度</th><th>可行度</th><th>整體</th><th>再使用</th>
+                <th>洞察力</th><th>清晰度</th><th>可行度</th><th>整體</th><th>再使用</th><th></th>
             </tr></thead>
             <tbody>{avg_row}{rows}</tbody>
         </table>
@@ -281,3 +287,16 @@ async def feedback_page(
     </html>
     """
     return HTMLResponse(html)
+
+
+@router.post("/feedback/delete")
+async def delete_feedback(
+    feedback_id: int = Form(...),
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """刪除單筆反饋評分"""
+    await db.execute(delete(Feedback).where(Feedback.id == feedback_id))
+    await db.commit()
+    logger.info(f"Admin {current_user.email} deleted feedback {feedback_id}")
+    return RedirectResponse(url="/admin/feedback", status_code=303)
