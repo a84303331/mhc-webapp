@@ -888,7 +888,7 @@ async def startup():
     scheduler = start_scheduler()
 
     # ── 每日超限報告（17:00）──
-    from database import get_async_session
+    from database import get_db
 
     async def daily_report():
         """17:00 查詢所有用戶今日用量並寄送管理員報告"""
@@ -897,7 +897,7 @@ async def startup():
         from mailer import send_email
 
         try:
-            async for session in get_async_session():
+            async for session in get_db():
                 today = date.today()
                 # 查詢所有已驗證用戶
                 result = await session.execute(
