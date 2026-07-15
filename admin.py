@@ -10,7 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from models import User
+from models import User, Feedback
 from auth import get_admin_user, get_current_user
 
 logger = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ async def admin_page(
     </head>
     <body>
         <div class="nav">
-            <a href="/ask">← 回問答頁</a>
+            <a href="/ask">← 回問答頁</a> · <a href="/admin/feedback">📊 反饋評分</a>
         </div>
         <h1>👑 MHC 管理後台</h1>
         <p>共 {len(users)} 位使用者</p>
@@ -200,3 +200,84 @@ async def delete_user(
         await db.commit()
         logger.info(f"Admin {current_user.email} deleted user {u.email}")
     return RedirectResponse(url="/admin", status_code=303)
+
+
+@router.get("/feedback", response_class=HTMLResponse)
+async def feedback_page(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """反饋評分查看頁面"""
+    result = await db.execute(
+        select(Feedback).order_by(Feedback.created_at.desc()).limit(100)
+    )
+    feedbacks = result.scalars().all()
+
+    rows = ""
+    total = {"insight": 0, "clarity": 0, "actionability": 0, "overall": 0, "reuse_intent": 0}
+    for f in feedbacks:
+        user_result = await db.execute(select(User).where(User.id == f.user_id))
+        user = user_result.scalar_one_or_none()
+        user_name = user.email if user else f"ID:{f.user_id}"
+        rows += f"""
+        <tr>
+            <td style="font-size:0.8rem;white-space:nowrap">{f.created_at.strftime('%m/%d %H:%M') if f.created_at else '-'}</td>
+            <td style="font-size:0.8rem">{user_name}</td>
+            <td style="font-size:0.75rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{f.case_id}</td>
+            <td style="text-align:center">{'⭐'*f.insight}</td>
+            <td style="text-align:center">{'⭐'*f.clarity}</td>
+            <td style="text-align:center">{'⭐'*f.actionability}</td>
+            <td style="text-align:center">{'⭐'*f.overall}</td>
+            <td style="text-align:center">{'⭐'*f.reuse_intent}</td>
+        </tr>"""
+        total["insight"] += f.insight
+        total["clarity"] += f.clarity
+        total["actionability"] += f.actionability
+        total["overall"] += f.overall
+        total["reuse_intent"] += f.reuse_intent
+
+    n = len(feedbacks) or 1
+    avg_row = f"""
+    <tr style="background:rgba(124,58,237,0.15);font-weight:bold">
+        <td colspan="3" style="text-align:right">📊 平均（{len(feedbacks)} 筆）</td>
+        <td style="text-align:center">{total['insight']/n:.1f}</td>
+        <td style="text-align:center">{total['clarity']/n:.1f}</td>
+        <td style="text-align:center">{total['actionability']/n:.1f}</td>
+        <td style="text-align:center">{total['overall']/n:.1f}</td>
+        <td style="text-align:center">{total['reuse_intent']/n:.1f}</td>
+    </tr>"""
+
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8">
+        <title>MHC 反饋評分</title>
+        <style>
+            :root {{ --bg: #0f0f1a; --card-bg: #1a1a2e; --text: #e0e0e0; --accent: #7c3aed; --border: #2a2a3e; }}
+            * {{ margin:0; padding:0; box-sizing:border-box; }}
+            body {{ font-family:sans-serif; background:var(--bg); color:var(--text); padding:2rem; max-width:1000px; margin:0 auto; }}
+            h1 {{ color:var(--accent); margin-bottom:1rem; }}
+            table {{ width:100%; border-collapse:collapse; background:var(--card-bg); border-radius:8px; overflow:hidden; }}
+            th, td {{ padding:0.6rem 0.75rem; border-bottom:1px solid var(--border); font-size:0.85rem; }}
+            th {{ background:var(--accent); color:white; }}
+            tr:hover {{ background:rgba(124,58,237,0.1); }}
+            a {{ color:var(--accent); }}
+            .nav {{ margin-bottom:1rem; }}
+        </style>
+    </head>
+    <body>
+        <div class="nav"><a href="/admin">← 管理後台</a></div>
+        <h1>📊 反饋評分</h1>
+        <table>
+            <thead><tr>
+                <th>時間</th><th>使用者</th><th>案例 ID</th>
+                <th>洞察力</th><th>清晰度</th><th>可行度</th><th>整體</th><th>再使用</th>
+            </tr></thead>
+            <tbody>{avg_row}{rows}</tbody>
+        </table>
+    </body>
+    </html>
+    """
+    return HTMLResponse(html)
