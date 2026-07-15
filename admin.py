@@ -273,7 +273,7 @@ async def feedback_page(
         <table>
             <thead><tr>
                 <th>時間</th><th>使用者</th><th>案例 ID</th>
-                <th>洞察力</th><th>清晰度</th><th>可行度</th><th>整體</th><th>再使用</th>
+                <th>洞察<br>有用性</th><th>框架<br>清晰度</th><th>行動<br>可行性</th><th>整體<br>品質</th><th>再使用<br>意願</th>
             </tr></thead>
             <tbody>{avg_row}{rows}</tbody>
         </table>

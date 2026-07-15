@@ -791,21 +791,21 @@ async def get_usage(current_user: User = Depends(get_current_user), db: AsyncSes
 def _feedback_form_html(case_id: str) -> str:
     """生成反饋表單 HTML + JS（五題 1-5 星評分）— 零 <script> 標籤版"""
     dimensions = [
-        ("insight", "洞察力"),
-        ("clarity", "清晰度"),
-        ("actionability", "可行度"),
-        ("overall", "整體評分"),
-        ("reuse_intent", "再使用意願"),
+        ("insight", "洞察有用性", "幫助我看到之前沒注意到的思考盲點"),
+        ("clarity", "框架清晰度", "結構清楚、容易理解，HC 習慣的解釋很到位"),
+        ("actionability", "行動可行性", "建議可以直接運用在實際情境中"),
+        ("overall", "整體品質", "對分析的深度與品質感到滿意"),
+        ("reuse_intent", "再使用意願", "願意再次使用 MHC 進行分析"),
     ]
     rows = ""
-    for key, label in dimensions:
+    for key, label, desc in dimensions:
         stars = "".join(
             f'<span class="star" data-value="{i}" data-dim="{key}" onclick="var r=document.querySelector(&#39;.star-rating[data-dim=&quot;{key}&quot;]&#39;);if(!r)return;r.querySelectorAll(&#39;.star&#39;).forEach(function(s){{s.classList.toggle(&#39;active&#39;,parseInt(s.dataset.value)<={i})}});var d=document.getElementById(&#39;feedback-ratings-{key}&#39;);if(!d){{d=document.createElement(&#39;input&#39;);d.type=&#39;hidden&#39;;d.id=&#39;feedback-ratings-{key}&#39;;d.name=&#39;{key}&#39;;document.getElementById(&#39;feedback-section&#39;).appendChild(d)}}d.value={i}">★</span>'
             for i in range(1, 6)
         )
         rows += f"""
         <div class="feedback-row" data-dim="{key}">
-            <span class="feedback-label">{label}</span>
+            <div class="feedback-label"><strong>{label}</strong><br><span class="feedback-desc">{desc}</span></div>
             <div class="star-rating" data-dim="{key}">{stars}</div>
         </div>"""
 
@@ -822,6 +822,7 @@ def _feedback_form_html(case_id: str) -> str:
 .feedback-row {{ display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid rgba(255,255,255,0.05); }}
 .feedback-row:last-child {{ border-bottom:none; }}
 .feedback-label {{ color:var(--text-secondary); font-size:0.85rem; min-width:100px; }}
+.feedback-desc {{ color:#666; font-size:0.7rem; }}
 .feedback-submit {{ margin-top:1rem; text-align:right; }}
 .feedback-msg {{ display:none; }}
 </style>
