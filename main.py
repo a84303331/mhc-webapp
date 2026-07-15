@@ -800,7 +800,7 @@ def _feedback_form_html(case_id: str) -> str:
     rows = ""
     for key, label in dimensions:
         stars = "".join(
-            f'<span class="star" data-value="{i}" data-dim="{key}">★</span>'
+            f'<span class="star" data-value="{i}" data-dim="{key}" onclick="window._mhcSetRating(&#39;{key}&#39;,{i})">★</span>'
             for i in range(1, 6)
         )
         rows += f"""
@@ -827,82 +827,53 @@ def _feedback_form_html(case_id: str) -> str:
     {rows}
     <div class="feedback-msg" id="feedback-msg"></div>
     <div class="feedback-submit">
-        <button class="btn btn-primary" id="feedback-btn">提交評分</button>
+        <button class="btn btn-primary" onclick="window._mhcSubmitFeedback('{case_id}')" id="feedback-btn">提交評分</button>
     </div>
 </div>
 <script>
-console.log('=== MHC FEEDBACK FORM LOADED ===');
-(function() {{
-    const CASE_ID = '{case_id}';
-    const DIMS = ['insight','clarity','actionability','overall','reuse_intent'];
-    const ratings = {{}};
-    DIMS.forEach(d => ratings[d] = 0);
-
-    const section = document.getElementById('feedback-section');
-    console.log('feedback-section found:', !!section);
-    console.log('star count:', document.querySelectorAll('.star').length);
-    console.log('btn found:', !!document.getElementById('feedback-btn'));
-
-    if (!section) {{
-        console.error('FATAL: #feedback-section not in DOM');
+window._mhcRatings = {{insight:0,clarity:0,actionability:0,overall:0,reuse_intent:0}};
+window._mhcDims = ['insight','clarity','actionability','overall','reuse_intent'];
+window._mhcSetRating = function(dim, val) {{
+    window._mhcRatings[dim] = val;
+    var row = document.querySelector('.star-rating[data-dim="' + dim + '"]');
+    if (!row) return;
+    row.querySelectorAll('.star').forEach(function(s) {{
+        s.classList.toggle('active', parseInt(s.dataset.value) <= val);
+    }});
+}};
+window._mhcSubmitFeedback = async function(caseId) {{
+    var btn = document.getElementById('feedback-btn');
+    var msg = document.getElementById('feedback-msg');
+    var zeros = window._mhcDims.filter(function(d) {{ return window._mhcRatings[d] === 0; }});
+    if (zeros.length > 0) {{
+        msg.textContent = '⚠️ 尚有 ' + zeros.length + ' 項未評分';
+        msg.style.cssText = 'display:block;color:#fbbf24;font-size:0.9rem;text-align:center;padding:0.5rem;';
         return;
     }}
-    document.getElementById('feedback-section').addEventListener('click', function(e) {{
-        const star = e.target.closest('.star');
-        if (!star) return;
-        const dim = star.dataset.dim;
-        const val = parseInt(star.dataset.value);
-        ratings[dim] = val;
-        // 只更新同一行的星星
-        const row = star.closest('.star-rating');
-        row.querySelectorAll('.star').forEach(s => {{
-            s.classList.toggle('active', parseInt(s.dataset.value) <= val);
-        }});
-        console.log('MHC feedback:', dim, '=', val, '| all:', JSON.stringify(ratings));
-    }});
-
-    // 提交按鈕
-    document.getElementById('feedback-btn').addEventListener('click', async function() {{
-        const btn = this;
-        const msg = document.getElementById('feedback-msg');
-        const zeros = DIMS.filter(d => ratings[d] === 0);
-        if (zeros.length > 0) {{
-            msg.textContent = '⚠️ 尚有 ' + zeros.length + ' 項未評分';
-            msg.style.cssText = 'display:block;color:#fbbf24;font-size:0.9rem;text-align:center;padding:0.5rem;';
-            return;
-        }}
-        btn.disabled = true;
-        btn.textContent = '提交中...';
-        msg.textContent = '';
-        msg.style.display = 'none';
-        try {{
-            const body = new URLSearchParams({{case_id: CASE_ID}});
-            DIMS.forEach(d => body.append(d, ratings[d]));
-            const resp = await fetch('/api/feedback', {{
-                method: 'POST',
-                headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
-                body: body
-            }});
-            console.log('MHC feedback submit:', resp.status);
-            if (resp.ok) {{
-                document.querySelectorAll('.feedback-row, .feedback-submit').forEach(el => el.style.display = 'none');
-                msg.textContent = '感謝你的回饋！🙏';
-                msg.style.cssText = 'display:block;color:#10b981;font-size:1.1rem;text-align:center;padding:1rem;';
-            }} else {{
-                btn.disabled = false;
-                btn.textContent = '提交評分';
-                msg.textContent = '⚠️ 提交失敗 (' + resp.status + ')，請稍後再試';
-                msg.style.cssText = 'display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem;';
-            }}
-        }} catch(e) {{
-            console.error('MHC feedback error:', e);
+    btn.disabled = true;
+    btn.textContent = '提交中...';
+    try {{
+        var body = new URLSearchParams();
+        body.append('case_id', caseId);
+        window._mhcDims.forEach(function(d) {{ body.append(d, window._mhcRatings[d]); }});
+        var resp = await fetch('/api/feedback', {{method:'POST',headers:{{'Content-Type':'application/x-www-form-urlencoded'}},body:body}});
+        if (resp.ok) {{
+            document.querySelectorAll('.feedback-row, .feedback-submit').forEach(function(el) {{ el.style.display = 'none'; }});
+            msg.textContent = '感謝你的回饋！🙏';
+            msg.style.cssText = 'display:block;color:#10b981;font-size:1.1rem;text-align:center;padding:1rem;';
+        }} else {{
             btn.disabled = false;
             btn.textContent = '提交評分';
-            msg.textContent = '⚠️ 網路錯誤，請稍後再試';
+            msg.textContent = '⚠️ 提交失敗 (' + resp.status + ')';
             msg.style.cssText = 'display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem;';
         }}
-    }});
-}})();
+    }} catch(e) {{
+        btn.disabled = false;
+        btn.textContent = '提交評分';
+        msg.textContent = '⚠️ 網路錯誤，請稍後再試';
+        msg.style.cssText = 'display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem;';
+    }}
+}};
 </script>"""
 
 
