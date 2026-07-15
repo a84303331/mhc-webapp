@@ -217,6 +217,7 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
 .star-rating .star.active, .star-rating .star:hover { color:#f59e0b; transform:scale(1.15); }
 .feedback-submit { margin-top:1rem; text-align:right; }
 .feedback-thanks { display:none; color:var(--success); text-align:center; padding:0.5rem; }
+.feedback-msg { display:none; }
 """
 
 
@@ -794,73 +795,88 @@ def _feedback_form_html(case_id: str) -> str:
     rows = ""
     for key, label in dimensions:
         stars = "".join(
-            f'<span class="star" data-value="{i}" data-dim="{key}" onclick="setRating(this, {i})">★</span>'
+            f'<span class="star" data-value="{i}" data-dim="{key}">★</span>'
             for i in range(1, 6)
         )
         rows += f"""
-        <div class="feedback-row">
+        <div class="feedback-row" data-dim="{key}">
             <span class="feedback-label">{label}</span>
-            <div class="star-rating" id="stars-{key}">{stars}</div>
+            <div class="star-rating" data-dim="{key}">{stars}</div>
         </div>"""
 
     return f"""
 <div class="feedback-section" id="feedback-section">
     <h3>📊 這份分析對你有幫助嗎？</h3>
     {rows}
-    <div class="feedback-thanks" id="feedback-thanks">感謝你的回饋！🙏</div>
+    <div class="feedback-msg" id="feedback-msg"></div>
     <div class="feedback-submit">
-        <button class="btn btn-primary" onclick="submitFeedback('{case_id}')" id="feedback-btn">提交評分</button>
+        <button class="btn btn-primary" id="feedback-btn">提交評分</button>
     </div>
 </div>
 <script>
-const ratings = {{insight:0, clarity:0, actionability:0, overall:0, reuse_intent:0}};
-function setRating(el, val) {{
-    const key = el.dataset.dim;
-    ratings[key] = val;
-    const parent = document.getElementById('stars-' + key);
-    parent.querySelectorAll('.star').forEach(s => {{
-        s.classList.toggle('active', parseInt(s.dataset.value) <= val);
-    }});
-}}
-async function submitFeedback(caseId) {{
-    if (Object.values(ratings).some(v => v === 0)) {{
-        alert('請對所有項目評分');
-        return;
-    }}
-    const btn = document.getElementById('feedback-btn');
-    btn.disabled = true;
-    btn.textContent = '提交中...';
-    try {{
-        const resp = await fetch('/api/feedback', {{
-            method: 'POST',
-            headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
-            body: new URLSearchParams({{case_id: caseId, ...ratings}})
+(function() {{
+    const CASE_ID = '{case_id}';
+    const DIMS = ['insight','clarity','actionability','overall','reuse_intent'];
+    const ratings = {{}};
+    DIMS.forEach(d => ratings[d] = 0);
+
+    // 事件委派：點擊星星
+    document.getElementById('feedback-section').addEventListener('click', function(e) {{
+        const star = e.target.closest('.star');
+        if (!star) return;
+        const dim = star.dataset.dim;
+        const val = parseInt(star.dataset.value);
+        ratings[dim] = val;
+        // 只更新同一行的星星
+        const row = star.closest('.star-rating');
+        row.querySelectorAll('.star').forEach(s => {{
+            s.classList.toggle('active', parseInt(s.dataset.value) <= val);
         }});
-        if (resp.ok) {{
-            // 隱藏評分行和按鈕，顯示感謝訊息
-            document.querySelectorAll('.feedback-row, .feedback-submit').forEach(el => el.style.display = 'none');
-            const thanks = document.getElementById('feedback-thanks');
-            thanks.style.display = 'block';
-            thanks.style.fontSize = '1.1rem';
-        }} else {{
+        console.log('MHC feedback:', dim, '=', val, '| all:', JSON.stringify(ratings));
+    }});
+
+    // 提交按鈕
+    document.getElementById('feedback-btn').addEventListener('click', async function() {{
+        const btn = this;
+        const msg = document.getElementById('feedback-msg');
+        const zeros = DIMS.filter(d => ratings[d] === 0);
+        if (zeros.length > 0) {{
+            msg.textContent = '⚠️ 尚有 ' + zeros.length + ' 項未評分';
+            msg.style.cssText = 'display:block;color:#fbbf24;font-size:0.9rem;text-align:center;padding:0.5rem;';
+            return;
+        }}
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+        msg.textContent = '';
+        msg.style.display = 'none';
+        try {{
+            const body = new URLSearchParams({{case_id: CASE_ID}});
+            DIMS.forEach(d => body.append(d, ratings[d]));
+            const resp = await fetch('/api/feedback', {{
+                method: 'POST',
+                headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},
+                body: body
+            }});
+            console.log('MHC feedback submit:', resp.status);
+            if (resp.ok) {{
+                document.querySelectorAll('.feedback-row, .feedback-submit').forEach(el => el.style.display = 'none');
+                msg.textContent = '感謝你的回饋！🙏';
+                msg.style.cssText = 'display:block;color:#10b981;font-size:1.1rem;text-align:center;padding:1rem;';
+            }} else {{
+                btn.disabled = false;
+                btn.textContent = '提交評分';
+                msg.textContent = '⚠️ 提交失敗 (' + resp.status + ')，請稍後再試';
+                msg.style.cssText = 'display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem;';
+            }}
+        }} catch(e) {{
+            console.error('MHC feedback error:', e);
             btn.disabled = false;
             btn.textContent = '提交評分';
-            const thanks = document.getElementById('feedback-thanks');
-            thanks.textContent = '⚠️ 提交失敗（' + resp.status + '），請稍後再試';
-            thanks.style.display = 'block';
-            thanks.style.color = '#f87171';
-            thanks.style.fontSize = '0.9rem';
+            msg.textContent = '⚠️ 網路錯誤，請稍後再試';
+            msg.style.cssText = 'display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem;';
         }}
-    }} catch(e) {{
-        btn.disabled = false;
-        btn.textContent = '提交評分';
-        const thanks = document.getElementById('feedback-thanks');
-        thanks.textContent = '⚠️ 網路錯誤，請稍後再試';
-        thanks.style.display = 'block';
-        thanks.style.color = '#f87171';
-        thanks.style.fontSize = '0.9rem';
-    }}
-}}
+    }});
+}})();
 </script>"""
 
 
