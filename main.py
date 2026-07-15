@@ -805,6 +805,18 @@ def _feedback_form_html(case_id: str) -> str:
         </div>"""
 
     return f"""
+<style>
+.star-rating {{ display:inline-flex; gap:4px; }}
+.star-rating .star {{ font-size:1.3rem; cursor:pointer; color:#555; transition:all 0.15s; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }}
+.star-rating .star.active, .star-rating .star:hover {{ color:#f59e0b; transform:scale(1.15); }}
+.feedback-section {{ margin-top:2rem; padding:1.5rem; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; }}
+.feedback-section h3 {{ color:var(--accent); margin-bottom:0.75rem; font-size:1rem; }}
+.feedback-row {{ display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid rgba(255,255,255,0.05); }}
+.feedback-row:last-child {{ border-bottom:none; }}
+.feedback-label {{ color:var(--text-secondary); font-size:0.85rem; min-width:100px; }}
+.feedback-submit {{ margin-top:1rem; text-align:right; }}
+.feedback-msg {{ display:none; }}
+</style>
 <div class="feedback-section" id="feedback-section">
     <h3>📊 這份分析對你有幫助嗎？</h3>
     {rows}
