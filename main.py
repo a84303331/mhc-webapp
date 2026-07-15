@@ -26,7 +26,7 @@ from auth import (
     get_current_user, validate_password_strength, hash_password,
 )
 from mhc_client import ask_mhc, MHCOfflineError, MHCBusyError
-from mailer import send_verification_email, send_password_reset_email
+from mailer import send_verification_email, send_password_reset_email, send_analysis_email
 import httpx
 from health_monitor import start_scheduler, get_status
 
@@ -721,7 +721,7 @@ async def ask(
         import uuid
         case_id = f"MHC-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
 
-        result = await ask_mhc(question, current_user.name)
+        result = await ask_mhc(question, current_user.name, case_id)
         html = result.get("html", "")
 
         # XSS 過濾
@@ -734,6 +734,12 @@ async def ask(
         await increment_daily_usage(current_user, db)
 
         logger.info("question_submitted", user_email=current_user.email, latency_ms=result.get("llm_latency_ms", 0))
+
+        # 背景寄送分析結果郵件
+        import asyncio
+        asyncio.create_task(
+            send_analysis_email(current_user.email, current_user.name, case_id, question, html)
+        )
 
         return HTMLResponse(html)
 

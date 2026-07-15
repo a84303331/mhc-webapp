@@ -122,19 +122,30 @@ async def send_password_reset_email(to: str, name: str, token: str) -> bool:
     return await send_email(to, "[MHC] 密碼重設請求", html)
 
 
-async def send_analysis_email(to: str, name: str, question: str, html_result: str) -> bool:
-    """寄送分析結果郵件（簡版純文字）"""
-    # 純文字簡版
-    text_body = f"""
-{name} 你好，
+async def send_analysis_email(to: str, name: str, case_id: str, question: str, html_result: str) -> bool:
+    """寄送完整 MHC 分析結果郵件（含 Q&A）"""
+    question_escaped = question.replace("<", "&lt;").replace(">", "&gt;")
+    html = f"""
+    <div style="max-width:700px;margin:0 auto;font-family:-apple-system,sans-serif;color:#e0e0e0;background:#1a1a2e;padding:2rem;border-radius:8px;">
+        <h2 style="color:#7c3aed;">🧠 MHC 分析結果</h2>
+        <p style="color:#a0a0b0;">{name} 你好，以下是你的 MHC 分析：</p>
 
-你的 MHC 分析已完成：
+        <div style="background:#16213e;padding:1rem;border-radius:8px;margin:1rem 0;border-left:3px solid #7c3aed;">
+            <strong style="color:#7c3aed;">📝 你的問題</strong>
+            <p style="margin-top:0.5rem;">{question_escaped}</p>
+        </div>
 
-問題：{question[:100]}{'...' if len(question) > 100 else ''}
+        <div style="background:#1a1a2e;padding:1rem;border-radius:8px;margin:1rem 0;border:1px solid #333;">
+            {html_result}
+        </div>
 
-完整分析請至 MHC 網站查看：https://mhc.summer-hsia.com
-
----
-Minerva HC Toolbox
-"""
-    return await send_email(to, "[MHC] 你的分析結果已就緒", text_body)
+        <hr style="border-color:#333;margin:1.5rem 0;">
+        <p style="color:#a0a0b0;font-size:12px;">
+            案例編號：{case_id}<br>
+            此郵件由 MHC 系統自動產生。<br>
+            <a href="https://mhc.summer-hsia.com" style="color:#7c3aed;">前往 MHC 網站</a>
+        </p>
+    </div>
+    """
+    subject = f"[MHC] 分析結果 — {question[:30]}{'...' if len(question) > 30 else ''} ({case_id})"
+    return await send_email(to, subject, html)

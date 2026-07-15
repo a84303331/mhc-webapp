@@ -33,7 +33,7 @@ class MHCBusyError(MHCClientError):
     pass
 
 
-async def ask_mhc(question: str, user_name: str, timeout: int = 120) -> dict:
+async def ask_mhc(question: str, user_name: str, case_id: str = "", timeout: int = 120) -> dict:
     """呼叫 PC 端 MHC Backend /ask
 
     Returns:
@@ -50,7 +50,7 @@ async def ask_mhc(question: str, user_name: str, timeout: int = 120) -> dict:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 url,
-                json={"question": question, "user_name": user_name},
+                json={"question": question, "user_name": user_name, "case_id": case_id},
                 headers={
                     "Authorization": f"Bearer {MHC_API_TOKEN}",
                     "Content-Type": "application/json",
