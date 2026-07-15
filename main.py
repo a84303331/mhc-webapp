@@ -789,7 +789,7 @@ async def get_usage(current_user: User = Depends(get_current_user), db: AsyncSes
 
 # ── 反饋表單輔助函式 ────────────────────────
 def _feedback_form_html(case_id: str) -> str:
-    """生成反饋表單 HTML + JS（五題 1-5 星評分）"""
+    """生成反饋表單 HTML + JS（五題 1-5 星評分）— 零 <script> 標籤版"""
     dimensions = [
         ("insight", "洞察力"),
         ("clarity", "清晰度"),
@@ -800,7 +800,7 @@ def _feedback_form_html(case_id: str) -> str:
     rows = ""
     for key, label in dimensions:
         stars = "".join(
-            f'<span class="star" data-value="{i}" data-dim="{key}" onclick="window._mhcSetRating(&#39;{key}&#39;,{i})">★</span>'
+            f'<span class="star" data-value="{i}" data-dim="{key}" onclick="var r=document.querySelector(&#39;.star-rating[data-dim=\\{key}\\ ]&#39;);if(!r)return;r.querySelectorAll(&#39;.star&#39;).forEach(function(s){{s.classList.toggle(&#39;active&#39;,parseInt(s.dataset.value)<={i})}});var d=document.getElementById(&#39;feedback-ratings-{key}&#39;);if(!d){{d=document.createElement(&#39;input&#39;);d.type=&#39;hidden&#39;;d.id=&#39;feedback-ratings-{key}&#39;;d.name=&#39;{key}&#39;;document.getElementById(&#39;feedback-section&#39;).appendChild(d)}}d.value={i}">★</span>'
             for i in range(1, 6)
         )
         rows += f"""
@@ -808,6 +808,9 @@ def _feedback_form_html(case_id: str) -> str:
             <span class="feedback-label">{label}</span>
             <div class="star-rating" data-dim="{key}">{stars}</div>
         </div>"""
+
+    # 提交按鈕的 onclick — 蒐集所有 hidden input 的值並 fetch
+    submit_onclick = f"""var b=this;var m=document.getElementById('feedback-msg');var f=document.getElementById('feedback-section');var h=f.querySelectorAll('input[type=hidden]');if(h.length<5){{m.textContent='⚠️ 尚有 '+(5-h.length)+' 項未評分';m.style.cssText='display:block;color:#fbbf24;font-size:0.9rem;text-align:center;padding:0.5rem';return}}b.disabled=true;b.textContent='提交中...';var p=new URLSearchParams();p.append('case_id','{case_id}');h.forEach(function(i){{p.append(i.name,i.value)}});fetch('/api/feedback',{{method:'POST',headers:{{'Content-Type':'application/x-www-form-urlencoded'}},body:p}}).then(function(r){{if(r.ok){{f.querySelectorAll('.feedback-row,.feedback-submit').forEach(function(e){{e.style.display='none'}});m.textContent='感謝你的回饋！🙏';m.style.cssText='display:block;color:#10b981;font-size:1.1rem;text-align:center;padding:1rem'}}else{{b.disabled=false;b.textContent='提交評分';m.textContent='⚠️ 提交失敗 ('+r.status+')';m.style.cssText='display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem'}}}}).catch(function(){{b.disabled=false;b.textContent='提交評分';m.textContent='⚠️ 網路錯誤，請稍後再試';m.style.cssText='display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem'}})"""
 
     return f"""
 <style>
@@ -827,54 +830,9 @@ def _feedback_form_html(case_id: str) -> str:
     {rows}
     <div class="feedback-msg" id="feedback-msg"></div>
     <div class="feedback-submit">
-        <button class="btn btn-primary" onclick="window._mhcSubmitFeedback('{case_id}')" id="feedback-btn">提交評分</button>
+        <button class="btn btn-primary" onclick="{submit_onclick}" id="feedback-btn">提交評分</button>
     </div>
-</div>
-<script>
-window._mhcRatings = {{insight:0,clarity:0,actionability:0,overall:0,reuse_intent:0}};
-window._mhcDims = ['insight','clarity','actionability','overall','reuse_intent'];
-window._mhcSetRating = function(dim, val) {{
-    window._mhcRatings[dim] = val;
-    var row = document.querySelector('.star-rating[data-dim="' + dim + '"]');
-    if (!row) return;
-    row.querySelectorAll('.star').forEach(function(s) {{
-        s.classList.toggle('active', parseInt(s.dataset.value) <= val);
-    }});
-}};
-window._mhcSubmitFeedback = async function(caseId) {{
-    var btn = document.getElementById('feedback-btn');
-    var msg = document.getElementById('feedback-msg');
-    var zeros = window._mhcDims.filter(function(d) {{ return window._mhcRatings[d] === 0; }});
-    if (zeros.length > 0) {{
-        msg.textContent = '⚠️ 尚有 ' + zeros.length + ' 項未評分';
-        msg.style.cssText = 'display:block;color:#fbbf24;font-size:0.9rem;text-align:center;padding:0.5rem;';
-        return;
-    }}
-    btn.disabled = true;
-    btn.textContent = '提交中...';
-    try {{
-        var body = new URLSearchParams();
-        body.append('case_id', caseId);
-        window._mhcDims.forEach(function(d) {{ body.append(d, window._mhcRatings[d]); }});
-        var resp = await fetch('/api/feedback', {{method:'POST',headers:{{'Content-Type':'application/x-www-form-urlencoded'}},body:body}});
-        if (resp.ok) {{
-            document.querySelectorAll('.feedback-row, .feedback-submit').forEach(function(el) {{ el.style.display = 'none'; }});
-            msg.textContent = '感謝你的回饋！🙏';
-            msg.style.cssText = 'display:block;color:#10b981;font-size:1.1rem;text-align:center;padding:1rem;';
-        }} else {{
-            btn.disabled = false;
-            btn.textContent = '提交評分';
-            msg.textContent = '⚠️ 提交失敗 (' + resp.status + ')';
-            msg.style.cssText = 'display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem;';
-        }}
-    }} catch(e) {{
-        btn.disabled = false;
-        btn.textContent = '提交評分';
-        msg.textContent = '⚠️ 網路錯誤，請稍後再試';
-        msg.style.cssText = 'display:block;color:#f87171;font-size:0.9rem;text-align:center;padding:0.5rem;';
-    }}
-}};
-</script>"""
+</div>"""
 
 
 # ── 反饋提交 API ─────────────────────────────
