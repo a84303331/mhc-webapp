@@ -64,6 +64,7 @@ ALLOWED_TAGS = [
     "ul", "ol", "li", "a", "strong", "em", "code", "pre", "blockquote",
     "table", "thead", "tbody", "tr", "th", "td",
     "img", "style", "header", "footer", "main", "nav",
+    "body", "html", "head", "meta", "title", "link",
 ]
 ALLOWED_ATTRS = {
     "*": ["class", "id", "style"],
