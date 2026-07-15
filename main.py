@@ -213,8 +213,8 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
 .feedback-row:last-child { border-bottom:none; }
 .feedback-label { color:var(--text-secondary); font-size:0.85rem; min-width:100px; }
 .star-rating { display:inline-flex; gap:4px; }
-.star-rating .star { font-size:1.3rem; cursor:pointer; color:#444; transition:color 0.15s; }
-.star-rating .star.active { color:var(--warning); }
+.star-rating .star { font-size:1.3rem; cursor:pointer; color:#555; transition:all 0.15s; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+.star-rating .star.active, .star-rating .star:hover { color:#f59e0b; transform:scale(1.15); }
 .feedback-submit { margin-top:1rem; text-align:right; }
 .feedback-thanks { display:none; color:var(--success); text-align:center; padding:0.5rem; }
 """
@@ -845,11 +845,20 @@ async function submitFeedback(caseId) {{
         }} else {{
             btn.disabled = false;
             btn.textContent = '提交評分';
-            alert('提交失敗，請稍後再試');
+            const thanks = document.getElementById('feedback-thanks');
+            thanks.textContent = '⚠️ 提交失敗（' + resp.status + '），請稍後再試';
+            thanks.style.display = 'block';
+            thanks.style.color = '#f87171';
+            thanks.style.fontSize = '0.9rem';
         }}
     }} catch(e) {{
         btn.disabled = false;
         btn.textContent = '提交評分';
+        const thanks = document.getElementById('feedback-thanks');
+        thanks.textContent = '⚠️ 網路錯誤，請稍後再試';
+        thanks.style.display = 'block';
+        thanks.style.color = '#f87171';
+        thanks.style.fontSize = '0.9rem';
     }}
 }}
 </script>"""
