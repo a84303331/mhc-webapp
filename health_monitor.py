@@ -80,7 +80,7 @@ def start_scheduler():
         minutes=PING_INTERVAL_MINUTES,
         id="ping_pc_backend",
         name="PC Backend Health Check",
-        next_run_time=None,  # 不立即執行，等 interval 到
+        next_run_time=datetime.now(timezone.utc),  # 立即執行首次 ping
     )
     scheduler.start()
     logger.info(
