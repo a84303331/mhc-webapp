@@ -800,7 +800,7 @@ def _feedback_form_html(case_id: str) -> str:
     rows = ""
     for key, label in dimensions:
         stars = "".join(
-            f'<span class="star" data-value="{i}" data-dim="{key}" onclick="var r=document.querySelector(&#39;.star-rating[data-dim=\\{key}\\ ]&#39;);if(!r)return;r.querySelectorAll(&#39;.star&#39;).forEach(function(s){{s.classList.toggle(&#39;active&#39;,parseInt(s.dataset.value)<={i})}});var d=document.getElementById(&#39;feedback-ratings-{key}&#39;);if(!d){{d=document.createElement(&#39;input&#39;);d.type=&#39;hidden&#39;;d.id=&#39;feedback-ratings-{key}&#39;;d.name=&#39;{key}&#39;;document.getElementById(&#39;feedback-section&#39;).appendChild(d)}}d.value={i}">★</span>'
+            f'<span class="star" data-value="{i}" data-dim="{key}" onclick="var r=document.querySelector(&#39;.star-rating[data-dim=&quot;{key}&quot;]&#39;);if(!r)return;r.querySelectorAll(&#39;.star&#39;).forEach(function(s){{s.classList.toggle(&#39;active&#39;,parseInt(s.dataset.value)<={i})}});var d=document.getElementById(&#39;feedback-ratings-{key}&#39;);if(!d){{d=document.createElement(&#39;input&#39;);d.type=&#39;hidden&#39;;d.id=&#39;feedback-ratings-{key}&#39;;d.name=&#39;{key}&#39;;document.getElementById(&#39;feedback-section&#39;).appendChild(d)}}d.value={i}">★</span>'
             for i in range(1, 6)
         )
         rows += f"""
