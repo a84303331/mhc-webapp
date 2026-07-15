@@ -34,7 +34,6 @@ from health_monitor import start_scheduler, get_status
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import bleach
 
 load_dotenv()
 
@@ -74,13 +73,14 @@ ALLOWED_ATTRS = {
 
 
 def sanitize_html(html: str) -> str:
-    """過濾 LLM 產出 HTML，移除危險標籤"""
-    return bleach.clean(
-        html,
-        tags=ALLOWED_TAGS,
-        attributes=ALLOWED_ATTRS,
-        strip=True,
-    )
+    """過濾 LLM 產出 HTML，只移除 <script> 和事件處理器，保留所有結構標籤"""
+    import re
+    # 移除 <script>...</script>
+    html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+    # 移除 on* 事件屬性
+    html = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', html, flags=re.IGNORECASE)
+    html = re.sub(r"\s+on\w+\s*=\s*['][^']*[']", '', html, flags=re.IGNORECASE)
+    return html
 
 
 # ── Turnstile 驗證 ──────────────────────────
