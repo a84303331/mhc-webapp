@@ -96,3 +96,49 @@ async def check_mhc_health(timeout: int = 10) -> dict:
             return response.json()
     except Exception as e:
         return {"status": "unreachable", "error": str(e)}
+
+
+async def post_feedback(
+    case_id: str,
+    insight: int,
+    clarity: int,
+    actionability: int,
+    overall: int,
+    reuse_intent: int,
+    timeout: int = 15,
+) -> dict:
+    """將使用者評分同步到 PC 端 Obsidian 案例檔案
+
+    背景呼叫，不影響使用者體驗。
+    失敗時僅記錄 log，不拋出例外。
+    """
+    url = f"{MHC_API_URL}/feedback"
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                url,
+                json={
+                    "case_id": case_id,
+                    "insight": insight,
+                    "clarity": clarity,
+                    "actionability": actionability,
+                    "overall": overall,
+                    "reuse_intent": reuse_intent,
+                },
+                headers={
+                    "Authorization": f"Bearer {MHC_API_TOKEN}",
+                    "Content-Type": "application/json",
+                },
+            )
+            if response.status_code == 200:
+                logger.info(f"feedback_synced_to_vault case_id={case_id}")
+                return response.json()
+            else:
+                logger.warning(
+                    f"feedback_sync_failed case_id={case_id} "
+                    f"status={response.status_code} body={response.text[:200]}"
+                )
+                return {"status": "sync_failed", "http_status": response.status_code}
+    except Exception as e:
+        logger.warning(f"feedback_sync_error case_id={case_id}: {e}")
+        return {"status": "sync_error", "error": str(e)}

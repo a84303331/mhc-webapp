@@ -865,6 +865,14 @@ async def submit_feedback(
     db.add(feedback)
     await db.commit()
     logger.info("feedback_saved", case_id=case_id, user=current_user.email)
+
+    # 背景同步到 PC 端 Obsidian 案例檔案（不影響使用者體驗）
+    import asyncio
+    from mhc_client import post_feedback
+    asyncio.create_task(
+        post_feedback(case_id, insight, clarity, actionability, overall, reuse_intent)
+    )
+
     return {"status": "ok"}
 
 
